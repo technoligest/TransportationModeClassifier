@@ -13,7 +13,7 @@ from geopy.distance import vincenty
 import statistics as st
 
 pd.set_option('display.width', 1000)
-get_ipython().magic('matplotlib inline')
+# get_ipython().magic('matplotlib inline')
 print("Done.")
 
 # In[5]:
@@ -89,17 +89,17 @@ def calc_group_stats(group):
   }
   print("group: ", group)
   for i in range(1, len(group.index)):
-    distance = vincenty(tuple(positions.iloc[i - 1][['latitude', 'longitude']]),
-                        tuple(positions.iloc[i][['latitude', 'longitude']])).meters
-    time = (positions.iloc[i]['time'].to_pydatetime() -
-            positions.iloc[i - 1]['time'].to_pydatetime()).total_seconds()
+    distance = vincenty(tuple(group.iloc[i - 1][['latitude', 'longitude']]),
+                        tuple(group.iloc[i][['latitude', 'longitude']])).meters
+    time = (group.iloc[i]['time'].to_pydatetime() -
+            group.iloc[i - 1]['time'].to_pydatetime()).total_seconds()
     speed = distance / time
     acceleration = (speed - measures['speed'][i - 1]) / time
-    bearing = calcBearing(tuple(positions.iloc[i - 1][['latitude', 'longitude']]),
-                          tuple(positions.iloc[i][['latitude', 'longitude']]))
+    bearing = calcBearing(tuple(group.iloc[i - 1][['latitude', 'longitude']]),
+                          tuple(group.iloc[i][['latitude', 'longitude']]))
     measures['distance'].append(distance)
     measures['speed'].append(speed)
-    measuers['acceleration'].append(acceleration)
+    measures['acceleration'].append(acceleration)
     measures['bearing'].append(bearing)
   calcs = {
     'min': lambda x: min(x),
