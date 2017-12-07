@@ -100,14 +100,68 @@ class ValueCalculator:
                if i!= (len(self._df.time)-1) else 0 for i in range(len(self._df.time))]
     bearing = [bearing[i]*self._mask[i] for i in range(len(bearing))]
     self._df['bearing'] = bearing
+
+  def _split_df(self):
+    temp_val = self._df.transportation_mode.iloc[0]
+    temp_df = pd.DataFrame()
+    temp_df = temp_df.append(self._df.iloc[0])
+    dfs = []
+    for i in range(1, len(self._df.id)):
+      if self._df.transportation_mode.iloc[i] != temp_val or i == len(self._df.id) - 1:
+        dfs.append(temp_df)
+        print("Just appended df of size: ", temp_df.shape)
+        temp_df = pd.DataFrame()
+        temp_df = temp_df.append(self._df.iloc[i])
+        temp_val = self._df.transportation_mode.iloc[i]
+      else:
+        temp_df = temp_df.append(self._df.iloc[i])
+    print("finished splitting.")
+    return dfs
+
   def calc_vals(self):
-    self._mask = self._get_masks()
-    self._add_timediff()
-    self._add_distance()
-    self._add_speed()
-    self._add_acc()
-    self._add_bearing()
-    return self._df
+    df_backup = self._df
+    result = pd.DataFrame()
+    for df in self._split_df():
+      print("Started iteration with _df shape: ", df.shape)
+      self._df = df
+      self._mask = self._get_masks()
+      self._add_timediff()
+      print("Finsihed timediff")
+      self._add_distance()
+      print("Finished distance")
+      self._add_speed()
+      print("Finsihed speed")
+      self._add_acc()
+      print("Finished acc")
+      self._add_bearing()
+      print("Finsihed bearing")
+      slice = self._df[['distance','speed','acc','bearing']]
+      means = slice.mean()
+      means.columns = ['distance_mean','speed_mean','acc_mean', 'bearing_mean']
+      print("Finished means.")
+      amax = slice.max()
+      amax.columns = [ 'distance_max','speed_max','acc_max', 'bearing_max']
+      print("finished max.")
+      amin = slice.min()
+      amin.columns = ['distance_min','speed_min','acc_min', 'bearing_min']
+      print("finished min.")
+      amedian = slice.median()
+      amedian.columns = [ 'distance_mediam','speed_mediam','acc_median', 'bearing_mediam']
+      print("finished median")
+      astd = slice.std()
+      astd.columns = [ 'distance_std','speed_std','acc_std', 'bearing_std']
+      tempResult = pd.DataFrame()
+      print("finished std")
+
+      transport = pd.Series( [df.transportation_mode.iloc[0]],['transportation_mode'])
+
+      tempResult = pd.concat([tempResult, means, amax, amin, amedian, astd, transport],   axis=0)
+
+      result     = result.append(tempResult.T)
+      print("finished iteration.")
+    result
+    self._df = df_backup
+    return result
 
 
 raw_geo = raw_geo.sort_values(['time'])
@@ -116,7 +170,16 @@ geo = geo[geo.transportation_mode != 'run']
 subtrajectories = geo.groupby(['id','date']).filter(lambda x: len(x) > 9).groupby(['id','date'])
 
 newGroups = [ValueCalculator(df).calc_vals() for _,df in subtrajectories]
-for i in newGroups:
-  print("They type: ",type(i))
+result = pd.DataFrame()
+for group in newGroups:
+  print("Shape: ",group.shape)
+for group in newGroups:
+  print("columns: ", group.columns)
+for group in newGroups:
+  # print("Shape: ",group.shape)
+  result = result.append(group)
 
+print("Shape: ",result.shape)
+print(result.columns)
+print(result.index)
 print("Done.")
