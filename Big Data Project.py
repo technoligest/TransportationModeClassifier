@@ -25,7 +25,7 @@ raw_geo = pd.read_csv("/Users/yaseralkayale/Documents/classes/current/csci6516 B
                         'date': lambda x: dt.datetime.strptime(x,'%Y-%m-%d'),
                         'time': lambda x: dt.datetime.strptime(x[0:-3],'%H:%M:%S')
                       }
-                      # ,nrows = 50000
+                      ,nrows = 50000
                       )
 print("Done.")
 
@@ -35,25 +35,7 @@ print("Done.")
 
 class ValueCalculator:
 
-  """
-  Copied from https://gist.github.com/jeromer/2005586
-  """
   def _calculate_initial_compass_bearing(self,pointA, pointB):
-    """
-    Calculates the bearing between two points.
-    The formulae used is the following:
-        θ = atan2(sin(Δlong).cos(lat2),
-                  cos(lat1).sin(lat2) − sin(lat1).cos(lat2).cos(Δlong))
-    :Parameters:
-      - `pointA: The tuple representing the latitude/longitude for the
-        first point. Latitude and longitude must be in decimal degrees
-      - `pointB: The tuple representing the latitude/longitude for the
-        second point. Latitude and longitude must be in decimal degrees
-    :Returns:
-      The bearing in degrees
-    :Returns Type:
-      float
-    """
     if (type(pointA) != tuple) or (type(pointB) != tuple):
       raise TypeError("Only tuples are supported as arguments")
 
@@ -134,112 +116,7 @@ geo = geo[geo.transportation_mode != 'run']
 subtrajectories = geo.groupby(['id','date']).filter(lambda x: len(x) > 9).groupby(['id','date'])
 
 newGroups = [ValueCalculator(df).calc_vals() for _,df in subtrajectories]
-
+for i in newGroups:
+  print("They type: ",type(i))
 
 print("Done.")
-
-
-
-
-
-"""
-This is mainly to make my life easier
-"""
-measure_vals = ['distance', 'speed', 'acceleration', 'bearing']
-print("started")
-def calcBearing(a,b):
-    lat1, lon1,lat2, lon2 = a,b
-    dLon = lon2 - lon1
-    y = sin(dLon) * cos(lat2)
-    x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
-    return atan2(y, x)
-  
-
-
-"""
-Group contains points of the same transportation mode.
-"""
-def calc_group_stats(group):
-  print("Got into group stats")
-  measures = {
-    'distance'    : [0],
-    'speed'       : [0],
-    'acceleration': [0],
-    'bearing'     : [0]
-  }
-  print("group: ",group)
-  for i in range(1, len(group.index)):
-    distance = vincenty(tuple(group.iloc[i-1][['latitude','longitude']]),
-                        tuple(group.iloc[i][['latitude','longitude']])).meters
-    time = (group.iloc[i]['time'].to_pydatetime()-
-            group.iloc[i-1]['time'].to_pydatetime()).total_seconds()
-    speed = distance/time
-    acceleration = (speed - measures['speed'][i-1]) / time
-    bearing = calcBearing(tuple(group.iloc[i-1][['latitude','longitude']]),
-                          tuple(group.iloc[i][['latitude','longitude']]))
-    measures['distance'].append(distance)
-    measures['speed'].append(speed)
-    measures['acceleration'].append(acceleration)
-    measures['bearing'].append(bearing)
-  calcs = {
-    'min'   : lambda x: min(x),
-    'max'   : lambda x: max(x),
-    'mean'  : lambda x: st.mean(x),
-    'median': lambda x: st.median(x),
-    'sd'    : lambda x: st.stdev(x)
-  } 
-  result ={
-    'distance'    : {'min':0, 'max':0,'mean':0,'median':0,'sd':0},
-    'speed'       : {'min':0, 'max':0,'mean':0,'median':0,'sd':0},
-    'acceleration': {'min':0, 'max':0,'mean':0,'median':0,'sd':0},
-    'bearing'     : {'min':0, 'max':0,'mean':0,'median':0,'sd':0}
-  }
-  for m in measures:
-    print(measures[m])
-#   for m in measures:
-#     for stat in calcs:
-#       result[m][stat] = calcs[stat](measures[m])
-  return result
-  
-
-  
-def split_trajectory(positions):
-  print("Got into split trajectory.")
-  curr_point = positions.iloc[0]
-  result = []
-  
-  curr_group = pd.DataFrame(columns=[positions.columns])
-  curr_group = curr_group.append(curr_point,ignore_index=True)
-  print(len(curr_group))
-  for p in range(1,len(positions)):
-    if positions.iloc[p]['transportation_mode'] == curr_point['transportation_mode']:
-      curr_group =curr_group.append(positions.iloc[p],ignore_index=True)
-    elif p == len(positions)-1:
-      curr_group = curr_group.append(positions.iloc[p],ignore_index=True)
-      result.append(curr_group)
-    else:
-      result.append(curr_group)
-      curr_point = positions.iloc[p]
-      curr_group = pd.DataFrame(columns=[positions.columns])
-      curr_group = curr_group.append(curr_point,ignore_index=True)
-  return result
-
-def find_stats(subtrajectory):
-  print("Got into find_stats")
-#   return [calc_group_stats(group) for group in split_group(subtrajectory)]
-  for group in split_trajectory(subtrajectory):
-    print("The length: ",len(group))
-  return None
-# result =[find_stats(j) for i,j in subtrajectories]
-for i,j in subtrajectories:
-  print("Stats: ")
-  print(find_stats(j))
-  break
-    
-print("Done.")
-    
-
-
-# ## References
-# - https://code.activestate.com/recipes/577594-gps-distance-and-bearing-between-two-gps-points/ Retrieved calc_bearing code on Dec 3, 2017
-# 
