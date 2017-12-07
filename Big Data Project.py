@@ -26,7 +26,7 @@ raw_geo = pd.read_csv("/Users/yaseralkayale/Documents/classes/current/csci6516 B
                         'date': lambda x: dt.datetime.strptime(x,'%Y-%m-%d'),
                         'time': lambda x: dt.datetime.strptime(x[0:-3],'%H:%M:%S')
                       }
-                      , nrows = 50000
+                      # , nrows = 500000
                       )
 print("Done reading in.")
 
@@ -104,21 +104,8 @@ class ValueCalculator:
 
   @printRunningTime
   def _split_df(self):
-    # df['flag'] = df.value.groupby([df.id, df.value.diff().ne(0).cumsum()]).transform('size').ge(3).astype(int)
-
-    temp_val = self._df.transportation_mode.iloc[0]
-    temp_df = pd.DataFrame()
-    temp_df = temp_df.append(self._df.iloc[0])
-    dfs = []
-    for i in range(1, len(self._df.id)):
-      if self._df.transportation_mode.iloc[i] != temp_val or i == len(self._df.id) - 1:
-        dfs.append(temp_df)
-        temp_df = pd.DataFrame()
-        temp_df = temp_df.append(self._df.iloc[i])
-        temp_val = self._df.transportation_mode.iloc[i]
-      else:
-        temp_df = temp_df.append(self._df.iloc[i])
-    return dfs
+    self._df['diff'] = self._df.transportation_mode.ne(self._df.transportation_mode.shift()).cumsum()
+    return [group for i, group in self._df.groupby(['diff'])]
 
   @printRunningTime
   def calc_vals(self):
