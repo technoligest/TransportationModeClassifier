@@ -1,12 +1,13 @@
 import pandas as pd
 import datetime as dt
 from values_calculator import *
+import plotters as pl
 
 pd.set_option('display.width', 1000)
 
 
 def read_data(file, nrows=None):
-  return pd.read_csv(file,
+  raw_geo = pd.read_csv(file,
                     sep='[\s,]',
                     header=None,
                     engine='python',
@@ -18,13 +19,11 @@ def read_data(file, nrows=None):
                     }
                     , nrows = nrows
                     )
-
-
-def clean_data(raw_geo):
-  raw_geo         = raw_geo.sort_values(['time'])
-  raw_geo         = raw_geo[raw_geo.transportation_mode != 'motorcycle']
-  raw_geo         = raw_geo[raw_geo.transportation_mode != 'run']
+  raw_geo = raw_geo.sort_values(['time'])
+  raw_geo = raw_geo[raw_geo.transportation_mode != 'motorcycle']
+  raw_geo = raw_geo[raw_geo.transportation_mode != 'run']
   return raw_geo
+
 
 
 def computeData(raw_geo):
@@ -44,16 +43,22 @@ def computeData(raw_geo):
       result = result.append(ValueCalculator(trajectory).calc_vals())
   return result
 
-def run_everything():
-  df = read_data("/Users/yaseralkayale/Documents/classes/current/csci6516 Big Data/Project/geolife_raw.csv")
+def run_everything(nrows=None, outpufFileName = "result.csv"):
+  df = read_data("/Users/yaseralkayale/Documents/classes/current/csci6516 Big Data/Project/geolife_raw.csv", nrows)
   print("Done reading in.")
-  df = clean_data(df)
-  print("Done data cleaning.")
   result = computeData(df)
   print("Done the computations")
-  result.to_csv("Result.csv")
-  print("Done everything.")
+  result.to_csv(outpufFileName)
+  print("Done saving result file.")
 
-run_everything()
+def plot_graph(filename):
+  df = pd.read_csv(filename, usecols=range(1, 22))
+  p = pl.Plotter(df)
+  p.plotHistogramPerClassAndFeature()
+  p.show()
+
+
+plot_graph("result2.csv")
+# run_everything(nrows = None, outpufFileName="result2.csv")
 
 

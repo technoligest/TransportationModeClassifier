@@ -40,28 +40,32 @@ class ValueCalculator:
     return [0 if i == (len(ids_list) - 1) or ids_list[i] != ids_list[i + 1] else 1 for i in range(len(ids_list))]
 
   def _add_timediff(self):
-    timediff = [
-      (self._df.time.iloc[i + 1] - self._df.time.iloc[i]).total_seconds() if i != (len(self._df.time) - 1) else 0 for i
-      in range(len(self._df.time))]
+    timediff = [(self._df.time.iloc[i + 1] - self._df.time.iloc[i]).total_seconds()
+                if i != (len(self._df.time) - 1)
+                else 0
+                for i in range(len(self._df.time))]
     timediff = [timediff[i] * self._mask[i] for i in range(len(timediff))]
     self._df['timediff'] = timediff
 
   def _add_distance(self):
     distance = [self._haversine_distance((self._df.lat.iloc[i], self._df.lon.iloc[i]),
                                          (self._df.lat.iloc[i + 1], self._df.lon.iloc[i + 1]))
-                if i != (len(self._df.time) - 1) else 0 for i in range(len(self._df.time))]
+                if i != (len(self._df.time) - 1)
+                else 0
+                for i in range(len(self._df.time))]
     distance = [distance[i] * self._mask[i] for i in range(len(distance))]
     self._df['distance'] = distance
 
   def _add_speed(self):
-    speed = [self._df.distance.iloc[i] / (self._df.timediff.iloc[i] + 0.1 ** 1000) for i in range(len(self._df.time))]
+    speed = [self._df.distance.iloc[i] / (self._df.timediff.iloc[i] + 0.1 ** 10) for i in range(len(self._df.time))]
     speed = [speed[i] * self._mask[i] for i in range(len(speed))]
     self._df['speed'] = speed
 
   def _add_acc(self):
-    acc = [(self._df.speed.iloc[i + 1] - self._df.speed.iloc[i]) / (self._df.timediff.iloc[i] + 0.1 ** 1000) if i != (
-        len(self._df.time) - 1)
-           else 0 for i in range(len(self._df.time))]
+    acc = [(self._df.speed.iloc[i + 1] - self._df.speed.iloc[i]) / (self._df.timediff.iloc[i] + 0.1 ** 10)
+                if i != (len(self._df.time) - 1)
+                else 0
+                for i in range(len(self._df.time))]
     acc = [acc[i] * self._mask[i] for i in range(len(acc))]
     self._df['acc'] = acc
 
@@ -73,12 +77,16 @@ class ValueCalculator:
     self._df['bearing'] = bearing
 
   def calc_vals(self):
+    if (len(self._df.index) < 2):
+      print("WHAT")
+      return None
     self._mask = self._get_masks()
     self._add_timediff()
     self._add_distance()
     self._add_speed()
     self._add_acc()
     self._add_bearing()
+    self._df = self._df[:-1]
     slice = self._df[['distance', 'speed', 'acc', 'bearing']]
     transport = pd.Series([self._df.transportation_mode.iloc[0]], ['transportation_mode'])
     result = pd.DataFrame()
