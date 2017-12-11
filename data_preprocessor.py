@@ -1,7 +1,14 @@
+#!/usr/bin/python3
+import pandas as pd
+import datetime as dt
 import math
 import numpy as np
 import pandas as pd
 from utils import *
+
+
+# from values_calculator import ValueCalculator
+
 
 class ValueCalculator:
   def __init__(self, df):
@@ -98,3 +105,40 @@ class ValueCalculator:
                       'distance_std',    'speed_std',    'acc_std',    'bearing_std',
                       'transportation_mode']
     return result
+def read_data(file, nrows=None):
+  raw_geo = pd.read_csv(file,
+                    sep='[\s,]',
+                    header=None,
+                    engine='python',
+                    skiprows=1,
+                    names = ['id','date','time','lat','lon','transportation_mode'],
+                    converters={
+                      'date': lambda x: dt.datetime.strptime(x,'%Y-%m-%d'),
+                      'time': lambda x: dt.datetime.strptime(x[0:-3],'%H:%M:%S')
+                    }
+                    , nrows = nrows
+                    )
+  raw_geo = raw_geo.sort_values(['time'])
+  raw_geo = raw_geo[raw_geo.transportation_mode != 'motorcycle']
+  raw_geo = raw_geo[raw_geo.transportation_mode != 'run']
+  return raw_geo
+
+
+
+def computeData(raw_geo):
+  groups = raw_geo.groupby(['id', 'date'])
+  result = pd.DataFrame()
+  numTraj = 0
+  for _, group in groups:
+    group['diff'] = group.transportation_mode.ne(group.transportation_mode.shift()).cumsum()
+    numTraj += len(group.groupby(['diff']).filter(lambda x: len(x) > 9).groupby(['diff']))
+  i = 1
+  for _, group in groups:
+    group['diff'] = group.transportation_mode.ne(group.transportation_mode.shift()).cumsum()
+    trajectories = group.groupby(['diff']).filter(lambda x: len(x) > 9).groupby(['diff'])
+    for _, trajectory in trajectories:
+      print("\tStarting trajectory ", i, "/", numTraj)
+      i += 1
+      result = result.append(ValueCalculator(trajectory).calc_vals())
+  return result
+
